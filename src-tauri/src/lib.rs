@@ -26,6 +26,7 @@ mod preset_converter;
 mod raw_processing;
 mod tagging;
 mod tagging_utils;
+mod trash_shim;
 
 use std::collections::{HashMap, hash_map::DefaultHasher};
 use std::fs;

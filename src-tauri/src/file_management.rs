@@ -11,6 +11,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
+// Cross-platform trash: real trash crate on desktop, permanent-delete stub on Android.
+use crate::trash_shim as trash;
+
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
 use chrono::{DateTime, Utc};
