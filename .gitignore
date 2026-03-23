@@ -34,13 +34,16 @@ src-tauri/resources/onnxruntime.dll
 # Gradle build cache and intermediate outputs inside the generated Android project.
 # The project files themselves (build.gradle.kts, settings.gradle, src/, etc.)
 # ARE tracked so the Android project can be iterated on.
-gen/android/.gradle/
-gen/android/build/
-gen/android/app/build/
-gen/android/app/.cxx/
-gen/android/local.properties
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/build/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/app/.cxx/
+src-tauri/gen/android/local.properties
 
-# APK / AAB outputs collected by build-android.sh
-build/android/*.apk
-build/android/*.aab
-build/android/*.aar
+# APK / AAB outputs collected by build-android.sh are tracked so they can be
+# downloaded and installed directly from the repo for test iterations.
+# Uncomment the lines below to stop tracking build outputs once you set up
+# a proper CI delivery pipeline.
+# build/android/*.apk
+# build/android/*.aab
+# build/android/*.aar

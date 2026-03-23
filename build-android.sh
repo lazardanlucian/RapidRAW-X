@@ -48,7 +48,7 @@ if [[ ! -d node_modules ]]; then
 fi
 
 # ── Tauri Android init (first-time only) ────────────────────────────────────
-if [[ ! -d "${REPO_ROOT}/gen/android" ]]; then
+if [[ ! -d "${REPO_ROOT}/src-tauri/gen/android" ]]; then
   echo "==> Initialising Tauri Android project (first run)..."
   npm run tauri android init
 fi
@@ -74,7 +74,7 @@ mkdir -p "${OUT_DIR}"
 echo "==> Copying build artefacts to ${OUT_DIR}..."
 
 # APKs (debug or release split / universal)
-find "${REPO_ROOT}/gen/android/app/build/outputs" \
+find "${REPO_ROOT}/src-tauri/gen/android/app/build/outputs" \
   \( -name "*.apk" -o -name "*.aab" \) \
   -exec cp -v {} "${OUT_DIR}/" \;
 

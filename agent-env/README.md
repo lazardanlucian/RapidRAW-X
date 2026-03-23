@@ -53,7 +53,7 @@ Output APKs and AABs are written to `build/android/`.
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Tauri 2 Android init | ✅ scripted | `build-android.sh` runs `tauri android init` on first use |
+| Tauri 2 Android init | ✅ scripted | `build-android.sh` runs `tauri android init` on first use; project in `src-tauri/gen/android/` |
 | Rust compilation | ✅ targets added | `aarch64`, `armv7`, `x86_64`, `x86` |
 | GPU (wgpu) | ⚠️ needs validation | wgpu supports Vulkan/GLES; test on device |
 | ONNX Runtime | ⚠️ needs Android `.so` | See `build.rs` note; add Android ONNX artefacts when available |
