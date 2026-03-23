@@ -29,3 +29,18 @@ dist-ssr
 src-tauri/resources/libonnxruntime.so
 src-tauri/resources/libonnxruntime.dylib
 src-tauri/resources/onnxruntime.dll
+
+# ── Android build artefacts ──────────────────────────────────────────────────
+# Gradle build cache and intermediate outputs inside the generated Android project.
+# The project files themselves (build.gradle.kts, settings.gradle, src/, etc.)
+# ARE tracked so the Android project can be iterated on.
+gen/android/.gradle/
+gen/android/build/
+gen/android/app/build/
+gen/android/app/.cxx/
+gen/android/local.properties
+
+# APK / AAB outputs collected by build-android.sh
+build/android/*.apk
+build/android/*.aab
+build/android/*.aar

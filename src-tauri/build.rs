@@ -65,6 +65,17 @@ fn main() {
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
+    // Android bundles its own ONNX Runtime shared library and does not use
+    // the desktop download mechanism.  Just run tauri-build and return early.
+    if target_os == "android" {
+        println!(
+            "cargo:warning=Android target detected: skipping ONNX Runtime download. \
+                  Provide libonnxruntime.so for the target ABI in src-tauri/resources if needed."
+        );
+        tauri_build::build();
+        return;
+    }
+
     let (download_filename, lib_name, expected_hash) =
         match (target_os.as_str(), target_arch.as_str()) {
             ("windows", "x86_64") => (
