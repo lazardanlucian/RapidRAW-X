@@ -6,8 +6,10 @@ use mimalloc::MiMalloc;
 static GLOBAL: MiMalloc = MiMalloc;
 
 mod ai_connector;
+#[cfg(not(target_os = "android"))]
 mod ai_processing;
 mod culling;
+#[cfg(not(target_os = "android"))]
 mod denoising;
 mod exif_processing;
 mod file_management;
@@ -24,7 +26,9 @@ mod panorama_stitching;
 mod panorama_utils;
 mod preset_converter;
 mod raw_processing;
+#[cfg(not(target_os = "android"))]
 mod tagging;
+#[cfg(not(target_os = "android"))]
 mod tagging_utils;
 mod trash_shim;
 
@@ -64,6 +68,7 @@ use tokio::sync::Mutex as TokioMutex;
 use tokio::task::JoinHandle;
 use wgpu::{Texture, TextureView};
 
+#[cfg(not(target_os = "android"))]
 use crate::ai_processing::{
     AiForegroundMaskParameters, AiSkyMaskParameters, AiState, AiSubjectMaskParameters,
     generate_image_embeddings, get_or_init_ai_models, run_sam_decoder, run_sky_seg_model,
@@ -87,6 +92,7 @@ use crate::image_processing::{
 };
 use crate::lut_processing::{Lut, convert_image_to_cube_lut, generate_identity_lut_image};
 use crate::mask_generation::{AiPatchDefinition, MaskDefinition, generate_mask_bitmap};
+#[cfg(not(target_os = "android"))]
 use tagging_utils::{candidates, hierarchy};
 
 #[cfg(target_os = "macos")]
@@ -173,11 +179,14 @@ pub struct AppState {
     gpu_context: Mutex<Option<GpuContext>>,
     gpu_image_cache: Mutex<Option<GpuImageCache>>,
     gpu_processor: Mutex<Option<GpuProcessorState>>,
+    #[cfg(not(target_os = "android"))]
     ai_state: Mutex<Option<AiState>>,
+    #[cfg(not(target_os = "android"))]
     ai_init_lock: TokioMutex<()>,
     export_task_handle: Mutex<Option<JoinHandle<()>>>,
     hdr_result: Arc<Mutex<Option<DynamicImage>>>,
     panorama_result: Arc<Mutex<Option<DynamicImage>>>,
+    #[cfg(not(target_os = "android"))]
     denoise_result: Arc<Mutex<Option<DynamicImage>>>,
     indexing_task_handle: Mutex<Option<JoinHandle<()>>>,
     pub lut_cache: Mutex<HashMap<String, Arc<Lut>>>,
@@ -590,7 +599,10 @@ async fn load_image(
         state.patch_cache.lock().unwrap().clear();
         state.geometry_cache.lock().unwrap().clear();
 
-        *state.denoise_result.lock().unwrap() = None;
+        #[cfg(not(target_os = "android"))]
+        {
+            *state.denoise_result.lock().unwrap() = None;
+        }
         *state.hdr_result.lock().unwrap() = None;
         *state.panorama_result.lock().unwrap() = None;
     }
@@ -2771,6 +2783,7 @@ fn generate_mask_overlay(
     }
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 async fn generate_ai_foreground_mask(
     js_adjustments: serde_json::Value,
@@ -2800,6 +2813,7 @@ async fn generate_ai_foreground_mask(
     })
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 async fn generate_ai_sky_mask(
     js_adjustments: serde_json::Value,
@@ -2829,6 +2843,7 @@ async fn generate_ai_sky_mask(
     })
 }
 
+#[cfg(not(target_os = "android"))]
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn generate_ai_subject_mask(
@@ -2982,6 +2997,7 @@ async fn generate_ai_subject_mask(
     })
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 async fn precompute_ai_subject_mask(
     js_adjustments: serde_json::Value,
@@ -3783,6 +3799,7 @@ async fn save_hdr(
     Ok(output_path.to_string_lossy().to_string())
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 async fn apply_denoising(
     path: String,
@@ -3823,6 +3840,7 @@ async fn apply_denoising(
     .map_err(|e| format!("Denoising task failed: {}", e))
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 async fn save_denoised_image(
     original_path_str: String,
@@ -4214,25 +4232,32 @@ fn frontend_ready(
                 let center_x = monitor_pos.x + (monitor_size.width as i32 - default_width) / 2;
                 let center_y = monitor_pos.y + (monitor_size.height as i32 - default_height) / 2;
 
-                let _ = window.set_size(tauri::PhysicalSize::new(
-                    default_width as u32,
-                    default_height as u32,
-                ));
-                let _ = window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
+                #[cfg(not(target_os = "android"))]
+                {
+                    let _ = window.set_size(tauri::PhysicalSize::new(
+                        default_width as u32,
+                        default_height as u32,
+                    ));
+                    let _ = window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
+                }
             }
         }
     }
 
+    #[cfg(not(target_os = "android"))]
     if let Err(e) = window.show() {
         log::error!("Failed to show window: {}", e);
     }
+    #[cfg(not(target_os = "android"))]
     if let Err(e) = window.set_focus() {
         log::error!("Failed to focus window: {}", e);
     }
     if is_first_run {
+        #[cfg(not(target_os = "android"))]
         if should_maximize {
             let _ = window.maximize();
         }
+        #[cfg(not(target_os = "android"))]
         if should_fullscreen {
             let _ = window.set_fullscreen(true);
         }
@@ -4361,6 +4386,9 @@ pub fn run() {
             start_analytics_worker(app_handle.clone());
             jxl_oxide::integration::register_image_decoding_hook();
 
+            // Desktop-only: window creation with decorations, size/position restore, and state saving.
+            #[cfg(not(target_os = "android"))]
+            {
             let window_cfg = app.config().app.windows.first().unwrap().clone();
             let transparent = settings.transparent.unwrap_or(window_cfg.transparent);
             let decorations = settings.decorations.unwrap_or(window_cfg.decorations);
@@ -4485,6 +4513,7 @@ pub fn run() {
                     _ => {}
                 }
             });
+            } // end #[cfg(not(target_os = "android"))] window setup block
             crate::register_exit_handler();
             Ok(())
         })
@@ -4496,11 +4525,14 @@ pub fn run() {
             gpu_context: Mutex::new(None),
             gpu_image_cache: Mutex::new(None),
             gpu_processor: Mutex::new(None),
+            #[cfg(not(target_os = "android"))]
             ai_state: Mutex::new(None),
+            #[cfg(not(target_os = "android"))]
             ai_init_lock: TokioMutex::new(()),
             export_task_handle: Mutex::new(None),
             hdr_result: Arc::new(Mutex::new(None)),
             panorama_result: Arc::new(Mutex::new(None)),
+            #[cfg(not(target_os = "android"))]
             denoise_result: Arc::new(Mutex::new(None)),
             indexing_task_handle: Mutex::new(None),
             lut_cache: Mutex::new(HashMap::new()),
@@ -4516,94 +4548,186 @@ pub fn run() {
             load_image_generation: Arc::new(AtomicUsize::new(0)),
             full_warped_cache: Mutex::new(None),
         })
-        .invoke_handler(tauri::generate_handler![
-            load_image,
-            apply_adjustments,
-            export_image,
-            batch_export_images,
-            cancel_export,
-            estimate_export_size,
-            estimate_batch_export_size,
-            generate_preview_for_path,
-            generate_original_transformed_preview,
-            generate_preset_preview,
-            generate_uncropped_preview,
-            preview_geometry_transform,
-            generate_mask_overlay,
-            generate_ai_subject_mask,
-            precompute_ai_subject_mask,
-            generate_ai_foreground_mask,
-            generate_ai_sky_mask,
-            update_window_effect,
-            check_ai_connector_status,
-            test_ai_connector_connection,
-            invoke_generative_replace_with_mask_def,
-            get_supported_file_types,
-            get_log_file_path,
-            frontend_log,
-            save_collage,
-            stitch_panorama,
-            save_panorama,
-            merge_hdr,
-            save_hdr,
-            apply_denoising,
-            save_denoised_image,
-            load_and_parse_lut,
-            fetch_community_presets,
-            generate_all_community_previews,
-            save_temp_file,
-            get_image_dimensions,
-            frontend_ready,
-            cancel_thumbnail_generation,
-            image_processing::calculate_auto_adjustments,
-            file_management::read_exif_for_paths,
-            file_management::list_images_in_dir,
-            file_management::list_images_recursive,
-            file_management::get_folder_tree,
-            file_management::get_pinned_folder_trees,
-            file_management::generate_thumbnails,
-            file_management::generate_thumbnails_progressive,
-            file_management::create_folder,
-            file_management::delete_folder,
-            file_management::copy_files,
-            file_management::move_files,
-            file_management::rename_folder,
-            file_management::rename_files,
-            file_management::duplicate_file,
-            file_management::show_in_finder,
-            file_management::delete_files_from_disk,
-            file_management::delete_files_with_associated,
-            file_management::save_metadata_and_update_thumbnail,
-            file_management::apply_adjustments_to_paths,
-            file_management::load_metadata,
-            file_management::load_presets,
-            file_management::save_presets,
-            file_management::load_settings,
-            file_management::save_settings,
-            file_management::reset_adjustments_for_paths,
-            file_management::apply_auto_adjustments_to_paths,
-            file_management::handle_import_presets_from_file,
-            file_management::handle_import_legacy_presets_from_file,
-            file_management::handle_export_presets_to_file,
-            file_management::save_community_preset,
-            file_management::clear_all_sidecars,
-            file_management::clear_thumbnail_cache,
-            file_management::set_color_label_for_paths,
-            file_management::import_files,
-            file_management::create_virtual_copy,
-            tagging::start_background_indexing,
-            tagging::clear_ai_tags,
-            tagging::clear_all_tags,
-            tagging::add_tag_for_paths,
-            tagging::remove_tag_for_paths,
-            culling::cull_images,
-            lens_correction::get_lensfun_makers,
-            lens_correction::get_lensfun_lenses_for_maker,
-            lens_correction::autodetect_lens,
-            lens_correction::get_lens_distortion_params,
-            negative_conversion::preview_negative_conversion,
-            negative_conversion::convert_negatives,
-        ])
+        .invoke_handler({
+            // Commands that are available on all platforms (including Android)
+            macro_rules! common_handlers {
+                () => {
+                    tauri::generate_handler![
+                        load_image,
+                        apply_adjustments,
+                        export_image,
+                        batch_export_images,
+                        cancel_export,
+                        estimate_export_size,
+                        estimate_batch_export_size,
+                        generate_preview_for_path,
+                        generate_original_transformed_preview,
+                        generate_preset_preview,
+                        generate_uncropped_preview,
+                        preview_geometry_transform,
+                        generate_mask_overlay,
+                        update_window_effect,
+                        check_ai_connector_status,
+                        test_ai_connector_connection,
+                        invoke_generative_replace_with_mask_def,
+                        get_supported_file_types,
+                        get_log_file_path,
+                        frontend_log,
+                        save_collage,
+                        stitch_panorama,
+                        save_panorama,
+                        merge_hdr,
+                        save_hdr,
+                        load_and_parse_lut,
+                        fetch_community_presets,
+                        generate_all_community_previews,
+                        save_temp_file,
+                        get_image_dimensions,
+                        frontend_ready,
+                        cancel_thumbnail_generation,
+                        image_processing::calculate_auto_adjustments,
+                        file_management::read_exif_for_paths,
+                        file_management::list_images_in_dir,
+                        file_management::list_images_recursive,
+                        file_management::get_folder_tree,
+                        file_management::get_pinned_folder_trees,
+                        file_management::generate_thumbnails,
+                        file_management::generate_thumbnails_progressive,
+                        file_management::create_folder,
+                        file_management::delete_folder,
+                        file_management::copy_files,
+                        file_management::move_files,
+                        file_management::rename_folder,
+                        file_management::rename_files,
+                        file_management::duplicate_file,
+                        file_management::show_in_finder,
+                        file_management::delete_files_from_disk,
+                        file_management::delete_files_with_associated,
+                        file_management::save_metadata_and_update_thumbnail,
+                        file_management::apply_adjustments_to_paths,
+                        file_management::load_metadata,
+                        file_management::load_presets,
+                        file_management::save_presets,
+                        file_management::load_settings,
+                        file_management::save_settings,
+                        file_management::reset_adjustments_for_paths,
+                        file_management::apply_auto_adjustments_to_paths,
+                        file_management::handle_import_presets_from_file,
+                        file_management::handle_import_legacy_presets_from_file,
+                        file_management::handle_export_presets_to_file,
+                        file_management::save_community_preset,
+                        file_management::clear_all_sidecars,
+                        file_management::clear_thumbnail_cache,
+                        file_management::set_color_label_for_paths,
+                        file_management::import_files,
+                        file_management::create_virtual_copy,
+                        culling::cull_images,
+                        lens_correction::get_lensfun_makers,
+                        lens_correction::get_lensfun_lenses_for_maker,
+                        lens_correction::autodetect_lens,
+                        lens_correction::get_lens_distortion_params,
+                        negative_conversion::preview_negative_conversion,
+                        negative_conversion::convert_negatives,
+                    ]
+                };
+            }
+            // Desktop-only commands that require ONNX Runtime (not available on Android)
+            #[cfg(not(target_os = "android"))]
+            {
+                tauri::generate_handler![
+                    load_image,
+                    apply_adjustments,
+                    export_image,
+                    batch_export_images,
+                    cancel_export,
+                    estimate_export_size,
+                    estimate_batch_export_size,
+                    generate_preview_for_path,
+                    generate_original_transformed_preview,
+                    generate_preset_preview,
+                    generate_uncropped_preview,
+                    preview_geometry_transform,
+                    generate_mask_overlay,
+                    generate_ai_subject_mask,
+                    precompute_ai_subject_mask,
+                    generate_ai_foreground_mask,
+                    generate_ai_sky_mask,
+                    update_window_effect,
+                    check_ai_connector_status,
+                    test_ai_connector_connection,
+                    invoke_generative_replace_with_mask_def,
+                    get_supported_file_types,
+                    get_log_file_path,
+                    frontend_log,
+                    save_collage,
+                    stitch_panorama,
+                    save_panorama,
+                    merge_hdr,
+                    save_hdr,
+                    apply_denoising,
+                    save_denoised_image,
+                    load_and_parse_lut,
+                    fetch_community_presets,
+                    generate_all_community_previews,
+                    save_temp_file,
+                    get_image_dimensions,
+                    frontend_ready,
+                    cancel_thumbnail_generation,
+                    image_processing::calculate_auto_adjustments,
+                    file_management::read_exif_for_paths,
+                    file_management::list_images_in_dir,
+                    file_management::list_images_recursive,
+                    file_management::get_folder_tree,
+                    file_management::get_pinned_folder_trees,
+                    file_management::generate_thumbnails,
+                    file_management::generate_thumbnails_progressive,
+                    file_management::create_folder,
+                    file_management::delete_folder,
+                    file_management::copy_files,
+                    file_management::move_files,
+                    file_management::rename_folder,
+                    file_management::rename_files,
+                    file_management::duplicate_file,
+                    file_management::show_in_finder,
+                    file_management::delete_files_from_disk,
+                    file_management::delete_files_with_associated,
+                    file_management::save_metadata_and_update_thumbnail,
+                    file_management::apply_adjustments_to_paths,
+                    file_management::load_metadata,
+                    file_management::load_presets,
+                    file_management::save_presets,
+                    file_management::load_settings,
+                    file_management::save_settings,
+                    file_management::reset_adjustments_for_paths,
+                    file_management::apply_auto_adjustments_to_paths,
+                    file_management::handle_import_presets_from_file,
+                    file_management::handle_import_legacy_presets_from_file,
+                    file_management::handle_export_presets_to_file,
+                    file_management::save_community_preset,
+                    file_management::clear_all_sidecars,
+                    file_management::clear_thumbnail_cache,
+                    file_management::set_color_label_for_paths,
+                    file_management::import_files,
+                    file_management::create_virtual_copy,
+                    tagging::start_background_indexing,
+                    tagging::clear_ai_tags,
+                    tagging::clear_all_tags,
+                    tagging::add_tag_for_paths,
+                    tagging::remove_tag_for_paths,
+                    culling::cull_images,
+                    lens_correction::get_lensfun_makers,
+                    lens_correction::get_lensfun_lenses_for_maker,
+                    lens_correction::autodetect_lens,
+                    lens_correction::get_lens_distortion_params,
+                    negative_conversion::preview_negative_conversion,
+                    negative_conversion::convert_negatives,
+                ]
+            }
+            #[cfg(target_os = "android")]
+            {
+                common_handlers!()
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(#[allow(unused_variables)] |app_handle, event| {
