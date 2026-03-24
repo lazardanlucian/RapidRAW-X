@@ -42,10 +42,8 @@ use crate::image_processing::{
 };
 use crate::mask_generation::MaskDefinition;
 use crate::preset_converter;
-#[cfg(not(target_os = "android"))]
-use crate::tagging::COLOR_TAG_PREFIX;
-#[cfg(target_os = "android")]
-const COLOR_TAG_PREFIX: &str = "color:";
+
+pub const COLOR_TAG_PREFIX: &str = "color:";
 
 const THUMBNAIL_WIDTH: u32 = 640;
 
