@@ -14,13 +14,12 @@ use tokenizers::Tokenizer;
 use tokio::task::JoinHandle;
 use walkdir::WalkDir;
 
-use crate::file_management::{self, parse_virtual_path};
+use crate::file_management::{self, parse_virtual_path, COLOR_TAG_PREFIX};
 use crate::formats::is_supported_image_file;
 use crate::hierarchy::TAG_HIERARCHY;
 use crate::image_processing::ImageMetadata;
 use crate::{AppState, candidates::TAG_CANDIDATES};
 
-pub const COLOR_TAG_PREFIX: &str = "color:";
 pub const USER_TAG_PREFIX: &str = "user:";
 
 fn preprocess_clip_image(image: &DynamicImage) -> Array<f32, ndarray::Dim<[usize; 4]>> {

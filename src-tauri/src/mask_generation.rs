@@ -1,3 +1,4 @@
+#[cfg(not(target_os = "android"))]
 use crate::ai_processing::{
     AiForegroundMaskParameters, AiSkyMaskParameters, AiSubjectMaskParameters,
 };
@@ -577,6 +578,7 @@ fn generate_ai_bitmap_from_base64(data_url: &str, tf: &TransformParams) -> Optio
     Some(generate_ai_bitmap_from_full_mask(&full_mask_image, tf))
 }
 
+#[cfg(not(target_os = "android"))]
 fn generate_ai_sky_bitmap(
     params_value: &Value,
     width: u32,
@@ -612,6 +614,7 @@ fn generate_ai_sky_bitmap(
     Some(mask)
 }
 
+#[cfg(not(target_os = "android"))]
 fn generate_ai_foreground_bitmap(
     params_value: &Value,
     width: u32,
@@ -647,6 +650,7 @@ fn generate_ai_foreground_bitmap(
     Some(mask)
 }
 
+#[cfg(not(target_os = "android"))]
 fn generate_ai_subject_bitmap(
     params_value: &Value,
     width: u32,
@@ -938,14 +942,42 @@ fn generate_sub_mask_bitmap(
             warped_image,
         ),
         "ai-subject" => {
-            generate_ai_subject_bitmap(&sub_mask.parameters, width, height, scale, crop_offset)
+            #[cfg(not(target_os = "android"))]
+            {
+                generate_ai_subject_bitmap(&sub_mask.parameters, width, height, scale, crop_offset)
+            }
+            #[cfg(target_os = "android")]
+            None
         }
         "ai-foreground" => {
-            generate_ai_foreground_bitmap(&sub_mask.parameters, width, height, scale, crop_offset)
+            #[cfg(not(target_os = "android"))]
+            {
+                generate_ai_foreground_bitmap(
+                    &sub_mask.parameters,
+                    width,
+                    height,
+                    scale,
+                    crop_offset,
+                )
+            }
+            #[cfg(target_os = "android")]
+            None
         }
-        "ai-sky" => generate_ai_sky_bitmap(&sub_mask.parameters, width, height, scale, crop_offset),
+        "ai-sky" => {
+            #[cfg(not(target_os = "android"))]
+            {
+                generate_ai_sky_bitmap(&sub_mask.parameters, width, height, scale, crop_offset)
+            }
+            #[cfg(target_os = "android")]
+            None
+        }
         "quick-eraser" => {
-            generate_ai_subject_bitmap(&sub_mask.parameters, width, height, scale, crop_offset)
+            #[cfg(not(target_os = "android"))]
+            {
+                generate_ai_subject_bitmap(&sub_mask.parameters, width, height, scale, crop_offset)
+            }
+            #[cfg(target_os = "android")]
+            None
         }
         "all" => Some(generate_all_bitmap(width, height)),
         _ => None,
