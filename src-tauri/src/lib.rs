@@ -64,6 +64,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{Emitter, Manager, ipc::Response};
 use tempfile::NamedTempFile;
+#[cfg(not(target_os = "android"))]
 use tokio::sync::Mutex as TokioMutex;
 use tokio::task::JoinHandle;
 use wgpu::{Texture, TextureView};
@@ -4070,7 +4071,7 @@ fn apply_window_effect(theme: String, window: &tauri::WebviewWindow) {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         let _ = (theme, window);
     }
@@ -4197,19 +4198,25 @@ fn frontend_ready(
     let is_first_run = !state
         .window_setup_complete
         .swap(true, std::sync::atomic::Ordering::Relaxed);
+    #[cfg(any(windows, target_os = "linux"))]
     let mut should_maximize = false;
+    #[cfg(not(any(windows, target_os = "linux")))]
+    let should_maximize = false;
+    #[cfg(any(windows, target_os = "linux"))]
     let mut should_fullscreen = false;
+    #[cfg(not(any(windows, target_os = "linux")))]
+    let should_fullscreen = false;
 
     if is_first_run && let Ok(config_dir) = app_handle.path().app_config_dir() {
         let path = config_dir.join("window_state.json");
 
         if let Ok(contents) = std::fs::read_to_string(&path)
-            && let Ok(saved_state) = serde_json::from_str::<WindowState>(&contents)
+            && let Ok(_saved_state) = serde_json::from_str::<WindowState>(&contents)
         {
             #[cfg(any(windows, target_os = "linux"))]
             {
-                should_maximize = saved_state.maximized;
-                should_fullscreen = saved_state.fullscreen;
+                should_maximize = _saved_state.maximized;
+                should_fullscreen = _saved_state.fullscreen;
             }
 
             if (should_maximize || should_fullscreen)
