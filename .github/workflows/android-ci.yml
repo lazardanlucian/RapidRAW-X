@@ -1,0 +1,87 @@
+name: Android Build (arm64)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Gradle 8+ requires Java 17
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # .cargo/config.toml hardcodes NDK 27.3.13750724; install it if not present
+      - name: Install NDK 27.3.13750724
+        run: |
+          if [ ! -d "${ANDROID_HOME}/ndk/27.3.13750724" ]; then
+            "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "ndk;27.3.13750724"
+          fi
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+
+      # Only install the single target we need (arm64 covers >95% of real devices)
+      - name: Install Rust with aarch64-linux-android target
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          targets: aarch64-linux-android
+          rustflags: ''
+
+      # Cache compiled Rust crates across runs.
+      # The cache key includes the Cargo.lock so a dependency bump triggers a rebuild.
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: android-aarch64
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Cache Gradle wrapper and downloaded dependencies
+      - name: Cache Gradle files
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('src-tauri/gen/android/**/*.gradle.kts', 'src-tauri/gen/android/**/*.gradle', 'src-tauri/gen/android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Debug build + arm64-only + APK (not AAB) for the fastest possible CI turnaround.
+      # --debug  → uses [profile.dev] (opt-level = 1, incremental); skips LTO / codegen-units=1
+      # --target aarch64 → compiles a single ABI instead of the default four
+      # --apk    → produces an installable APK; avoids signing overhead of AAB
+      - name: Build Android APK (arm64 debug)
+        run: npx tauri android build --debug --target aarch64 --apk
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-arm64-apk
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          retention-days: 7
+          if-no-files-found: warn
